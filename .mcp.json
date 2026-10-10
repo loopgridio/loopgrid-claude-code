@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "loopgrid": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["--from", "loopgrid-mcp==0.1.0", "loopgrid-mcp"]
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "description": "Optional LoopGrid decision evidence and policy gate for consequential Claude Code tool operations. Default mode off.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Write|Edit|MultiEdit|NotebookEdit|mcp__.*",
+        "hooks": [
+          {"type": "command", "command": "python", "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/loopgrid_hook.py", "pre"], "timeout": 30}
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash|Write|Edit|MultiEdit|NotebookEdit|mcp__.*",
+        "hooks": [
+          {"type": "command", "command": "python", "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/loopgrid_hook.py", "post"], "timeout": 30}
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "Bash|Write|Edit|MultiEdit|NotebookEdit|mcp__.*",
+        "hooks": [
+          {"type": "command", "command": "python", "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/loopgrid_hook.py", "failure"], "timeout": 30}
+        ]
+      }
+    ]
+  }
+}

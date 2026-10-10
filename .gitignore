@@ -1,0 +1,15 @@
+__pycache__/
+.pytest_cache/
+*.pyc
+*.sqlite3
+*.db
+*.env
+.env
+.DS_Store
+*.log
+.dist/
+.venv/
+loopgrid-evidence/
+examples/sandbox_mcp/
+.venv*/
+*.sqlite3-*

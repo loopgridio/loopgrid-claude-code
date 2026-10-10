@@ -1,0 +1,13 @@
+{
+  "name": "loopgrid",
+  "displayName": "LoopGrid Decision Evidence",
+  "description": "Verifiable Claude Code decision evidence: six MCP tools and optional opt-in Pre/Post tool hooks send tool names, hashed inputs/results and numeric policy fields to your configured LoopGrid Core for policy gating and signed verification.",
+  "version": "0.1.0",
+  "author": {
+    "name": "LoopGrid",
+    "email": "hello@loopgrid.io"
+  },
+  "homepage": "https://loopgrid.io/integrations/",
+  "repository": "https://github.com/loopgridio/loopgrid-claude-code",
+  "license": "Apache-2.0"
+}
