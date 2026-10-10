@@ -37,7 +37,7 @@ def config(env=None):
     mode = env.get("LOOPGRID_CLAUDE_MODE", "off").lower().strip()
     if mode not in {"off", "observe", "enforce"}:
         raise HookFailure("Invalid LOOPGRID_CLAUDE_MODE; use off, observe, or enforce")
-    base = env.get("LOOPGRID_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+    base = (env.get("CLAUDE_PLUGIN_OPTION_CORE_URL") or env.get("LOOPGRID_BASE_URL", "http://127.0.0.1:8000")).rstrip("/")
     parsed = urlsplit(base)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment or parsed.path not in {"", "/"}:
         raise HookFailure("LOOPGRID_BASE_URL must be an http(s) origin without credentials or path")
@@ -46,8 +46,8 @@ def config(env=None):
     patterns = tuple(x.strip() for x in env.get("LOOPGRID_CLAUDE_TOOLS", DEFAULT_TOOLS).split(",") if x.strip())
     root = Path(env.get("CLAUDE_PLUGIN_DATA") or Path.home() / ".loopgrid" / "claude-code")
     return {
-        "mode": mode, "base": base, "key": env.get("LOOPGRID_SERVICE_KEY", ""),
-        "workspace": env.get("LOOPGRID_WORKSPACE", "default").strip() or "default",
+        "mode": mode, "base": base, "key": env.get("CLAUDE_PLUGIN_OPTION_SERVICE_KEY", ""),
+        "workspace": (env.get("CLAUDE_PLUGIN_OPTION_WORKSPACE_ID") or env.get("LOOPGRID_WORKSPACE", "default")).strip() or "default",
         "policy": env.get("LOOPGRID_CLAUDE_POLICY_ID", "").strip(),
         "tools": patterns, "state": root / "hook_state.sqlite3",
     }
@@ -74,7 +74,7 @@ def project_opted_in(env=None):
 
 def protected(name, cfg):
     # Our own MCP tools manage their evidence separately and must not recurse.
-    if name.startswith("mcp__loopgrid__") or name.startswith("mcp__plugin_loopgrid_"):
+    if name.startswith("mcp__loopgrid__") or name.startswith("mcp__plugin_loopgrid_loopgrid__"):
         return False
     return any(fnmatch.fnmatchcase(name, p) for p in cfg["tools"])
 

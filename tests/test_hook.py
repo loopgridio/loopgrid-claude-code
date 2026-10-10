@@ -101,9 +101,10 @@ class HookTests(unittest.TestCase):
         self.assertFalse(self.cfg["state"].exists())
 
     def test_own_mcp_exempt(self):
-        for n in ["mcp__loopgrid__record_decision", "mcp__plugin_loopgrid_foo__record_decision"]:
+        for n in ["mcp__loopgrid__record_decision", "mcp__plugin_loopgrid_loopgrid__record_decision"]:
             self.assertFalse(hook.protected(n, self.cfg))
         self.assertTrue(hook.protected("mcp__stripe__refund", self.cfg))
+        self.assertTrue(hook.protected("mcp__plugin_loopgrid_stripe__refund", self.cfg))
 
     def test_core_auto_allow_no_override(self):
         with self.core.patched():
@@ -437,7 +438,52 @@ class FormatTests(unittest.TestCase):
     def test_mcp_server_pinned_version(self):
         root = Path(__file__).resolve().parents[1]
         data = json.loads((root / ".mcp.json").read_text())
-        self.assertIn("loopgrid-mcp==0.1.0", data["mcpServers"]["loopgrid"]["args"])
+        args = data["mcpServers"]["loopgrid"]["args"]
+        self.assertEqual(data["mcpServers"]["loopgrid"]["command"], "uv")
+        self.assertIn("--locked", args)
+        self.assertIn("${CLAUDE_PLUGIN_ROOT}/scripts/launch_mcp.py", args)
+        project = (root / "pyproject.toml").read_text(encoding="utf-8")
+        self.assertIn('"loopgrid-mcp==0.1.0"', project)
+        # The marketplace release must have a registry-generated uv.lock too.
+        # It is produced on the connected Windows machine, never fabricated.
+
+
+    def test_plugin_user_config_sensitive(self):
+        root = Path(__file__).resolve().parents[1]
+        plugin = json.loads((root / ".claude-plugin/plugin.json").read_text())
+        self.assertTrue(plugin["userConfig"]["service_key"]["sensitive"])
+        self.assertFalse(plugin["userConfig"]["service_key"]["required"])
+        self.assertEqual(plugin["userConfig"]["core_url"]["type"], "string")
+
+    def test_hook_credential_only_from_plugin_option(self):
+        cfg = hook.config({"LOOPGRID_SERVICE_KEY": "machine-wide-secret"})
+        self.assertEqual(cfg["key"], "")
+        cfg2 = hook.config({"LOOPGRID_SERVICE_KEY": "bad", "CLAUDE_PLUGIN_OPTION_SERVICE_KEY":"claude-secure-key"})
+        self.assertEqual(cfg2["key"], "claude-secure-key")
+
+    def test_mcp_wrapper_credentials_and_options(self):
+        root = Path(__file__).resolve().parents[1]
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("lg_launch", root/"scripts/launch_mcp.py")
+        wrapper = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(wrapper)
+        out = wrapper.prepare_environment({"LOOPGRID_SERVICE_KEY":"inherited", "CLAUDE_PLUGIN_OPTION_SERVICE_KEY":" new-secret ",
+                                           "CLAUDE_PLUGIN_OPTION_CORE_URL":"https://core.example.org", "CLAUDE_PLUGIN_OPTION_WORKSPACE_ID":"ws_public"})
+        self.assertEqual(out["LOOPGRID_SERVICE_KEY"], "new-secret")
+        self.assertEqual(out["LOOPGRID_BASE_URL"], "https://core.example.org")
+        self.assertEqual(out["LOOPGRID_WORKSPACE"], "ws_public")
+        out2 = wrapper.prepare_environment({"LOOPGRID_SERVICE_KEY":"inherited"})
+        self.assertNotIn("LOOPGRID_SERVICE_KEY", out2)
+
+    def test_square_marketplace_icon(self):
+        import struct
+        root = Path(__file__).resolve().parents[1]
+        icon = root/".claude-plugin/icon.png"
+        with icon.open("rb") as fh:
+            header = fh.read(24)
+        self.assertEqual(header[:8], b"\x89PNG\r\n\x1a\n")
+        self.assertEqual(struct.unpack(">II", header[16:24]), (1024, 1024))
+        self.assertLess(icon.stat().st_size, 2*1024*1024)
 
     def test_hooks_do_not_auto_allow(self):
         root = Path(__file__).resolve().parents[1]

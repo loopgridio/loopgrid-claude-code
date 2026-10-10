@@ -9,5 +9,26 @@
   },
   "homepage": "https://loopgrid.io/integrations/",
   "repository": "https://github.com/loopgridio/loopgrid-claude-code",
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "userConfig": {
+    "core_url": {
+      "type": "string",
+      "title": "LoopGrid Core URL",
+      "description": "Optional HTTPS LoopGrid Core origin, or http://127.0.0.1:8000 for a local Core; leave blank to use LOOPGRID_BASE_URL.",
+      "required": false
+    },
+    "workspace_id": {
+      "type": "string",
+      "title": "LoopGrid workspace ID",
+      "description": "Optional workspace ID for evidence and policy. Leave blank to use LOOPGRID_WORKSPACE or default.",
+      "required": false
+    },
+    "service_key": {
+      "type": "string",
+      "title": "LoopGrid service key",
+      "description": "Optional Core API service key, stored in Claude secure configuration. Not needed for a local unauthenticated Core.",
+      "required": false,
+      "sensitive": true
+    }
+  }
 }

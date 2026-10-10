@@ -2,8 +2,15 @@
   "mcpServers": {
     "loopgrid": {
       "type": "stdio",
-      "command": "uvx",
-      "args": ["--from", "loopgrid-mcp==0.1.0", "loopgrid-mcp"]
+      "command": "uv",
+      "args": [
+        "run",
+        "--project",
+        "${CLAUDE_PLUGIN_ROOT}",
+        "--locked",
+        "python",
+        "${CLAUDE_PLUGIN_ROOT}/scripts/launch_mcp.py"
+      ]
     }
   }
 }

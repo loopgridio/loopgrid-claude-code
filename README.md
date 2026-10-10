@@ -42,11 +42,11 @@ Claude Code
 
 The plugin includes three registered tool lifecycle hooks (`PreToolUse`, `PostToolUse`, `PostToolUseFailure`) for matching Bash, file-edit and MCP tools. **Automatic hook capture is off by default and requires a project activation file.** An operator explicitly enables `observe` or `enforce` in the environment **before launching Claude Code**, and opts in each project by placing `.loopgrid/claude-code.enabled` in its root. When enabled, the bridge can contact the operator-configured LoopGrid Core over HTTPS (or local loopback HTTP) and send the tool name, canonical input/result SHA-256 commitments, hashed session/tool-use IDs, and a numeric `amount` field if the tool arguments provide one. Raw hook arguments and results are not sent by this bridge. Tool content may include low-entropy values whose hashes are guessable. See [SECURITY.md](SECURITY.md).
 
-The bundled MCP configuration starts the independently published `loopgrid-mcp==0.1.0` through `uvx`, which **downloads the Python package and its dependencies on first use** if not cached. MCP tools record data only when invoked and may send additional operator-approved decision content to the connected Core; the default evidence export excludes payloads. The plugin has **no analytics endpoint or separate usage telemetry**. Review the declared LoopGrid endpoint and credentials before enabling capture. Enabling this plugin is not an authorization to send unrelated sensitive tool data.
+The bundled MCP configuration uses `uv run --locked` with the registry-generated `uv.lock` and published `loopgrid-mcp==0.1.0`. It **downloads the locked Python package and its dependencies on first use** if they are not cached. MCP tools record data only when invoked and may send additional operator-approved decision content to the connected Core; the default evidence export excludes payloads. The plugin has **no analytics endpoint or separate usage telemetry**. Review the declared LoopGrid endpoint and credentials before enabling capture. Enabling this plugin is not an authorization to send unrelated sensitive tool data.
 
 ### Installation
 
-Prerequisites: Claude Code installed, Python 3.10+ available as `python`, `uvx` (from the [uv](https://docs.astral.sh/uv/) toolchain) available on PATH, and a reachable LoopGrid v0.8.x Core. The plugin uses the existing published [loopgrid-mcp==0.1.0](https://pypi.org/project/loopgrid-mcp/) and downloads it on first launch through `uvx`.
+Prerequisites: Claude Code installed, Python 3.10+ available as `python`, `uv` (from the [uv](https://docs.astral.sh/uv/) toolchain) available on PATH, and a reachable LoopGrid v0.8.x Core. The plugin uses the existing published [loopgrid-mcp==0.1.0](https://pypi.org/project/loopgrid-mcp/) and downloads locked dependencies on first launch through `uv run --locked`.
 
 1. Download or clone the repository into a directory named `loopgrid-claude-code` and open a terminal **inside that folder**.
 2. Set the LoopGrid configuration in the **terminal that starts Claude Code**. For local evaluation on Windows PowerShell:
@@ -54,7 +54,10 @@ Prerequisites: Claude Code installed, Python 3.10+ available as `python`, `uvx` 
    ```powershell
    $env:LOOPGRID_BASE_URL = 'http://127.0.0.1:8000'
    $env:LOOPGRID_WORKSPACE = 'your-workspace-id'
-   # On an authenticated Core, set LOOPGRID_SERVICE_KEY with an appropriately scoped credential.
+   # For authenticated Core, configure the optional service_key through the
+   # Claude plugin manager (sensitive userConfig, stored securely).
+   # For local --plugin-dir smoke tests only, use a session-only
+   # CLAUDE_PLUGIN_OPTION_SERVICE_KEY without committing it anywhere.
    python .\scripts\doctor.py
    claude plugin validate .
    claude --plugin-dir .
@@ -63,6 +66,8 @@ Prerequisites: Claude Code installed, Python 3.10+ available as `python`, `uvx` 
    For macOS/Linux, export the same environment variables and use `python3` only if your system's `python` is not on PATH; the hook executor requires a command named `python` unless you change the hook config to your interpreter.
 
 3. In Claude Code, use `/mcp` to check that the `loopgrid` server is connected; use `/loopgrid:decision`, `/loopgrid:verify`, `/loopgrid:review`, or `/loopgrid:guard`. The MCP server's review tool is disabled by default. Installing the plugin does not grant review authority.
+
+The plugin declares `core_url`, `workspace_id`, and a sensitive `service_key` using Claude plugin `userConfig`. It never reads an inherited machine-wide `LOOPGRID_SERVICE_KEY` for the hook or MCP launcher; the service key is intentionally sourced from Claude-managed plugin configuration. Local developer testing can set `CLAUDE_PLUGIN_OPTION_SERVICE_KEY` in the launching shell without storing it in the repository. On some Claude graphical clients, plugin `userConfig` prompts may require explicit configuration from the plugin manager or Claude Code terminal.
 
 The plugin can also be distributed through a GitHub Claude Code marketplace. The main manifest is `.claude-plugin/plugin.json`; `.mcp.json`, `hooks/hooks.json`, and `skills/` are at the plugin root.
 

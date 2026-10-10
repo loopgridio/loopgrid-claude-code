@@ -15,7 +15,7 @@
 ## Validated on Windows (October 2026)
 
 - 44/44 standard-library Python security/contract tests passed on Windows after SQLite cleanup, denial wording, and project-scoped activation changes (`python -m unittest discover -s tests -q`); compilation passed.
-- `claude plugin validate .` passed using **Claude Code CLI 2.1.292**. `uvx 0.12.17` available.
+- `claude plugin validate .` passed using **Claude Code CLI 2.1.292**. `uv 0.12.17` is available in the test environment.
 - `claude --plugin-dir .` loaded the four skills (`decision`, `review`, `verify`, `guard`) and all three plugin hooks (`PreToolUse`, `PostToolUse`, `PostToolUseFailure`). The `loopgrid` MCP server connected and exposed six tools.
 - **Real runtime observation:** Claude Code executed Bash `echo LOOPGRID_CLAUDE_HOOK_TEST` once, the plugin persisted `result_recorded` for a decision with three signed events, Core verification returned valid, and exported attested bundle `dec_d051d1d4563e4c20a89fec88` independently passed `loopgrid-verify==0.1.0`.
 - **Real runtime missing-policy denial:** With `LOOPGRID_CLAUDE_MODE=enforce` and no policy ID, a Bash file-creation attempt failed closed; the file did not exist.
@@ -42,7 +42,7 @@
 4. With local Core v0.8.x, run `python examples/core_sandbox_e2e.py` to create an isolated test workspace and policy, exercise a synthetic tool receipt and separately observed outcome, and verify the test workspace chain. Diagnose the old shared workspace using `python examples/inspect_workspace_integrity.py dec_...`. Then export the evidence ZIP and run standalone `loopgrid-verify` off-host. The script does not itself perform independent offline verification.
 5. Configure `observe` with guarded harmless shell/file calls. Check a per-tool Core record and SQLite correlation. Test a simulated Core outage.
 6. Configure `enforce` with an actual applicable auto-allow policy and sandbox tool. Check authorized, denied, missing policy, changed tool arguments, replay and failure-reconciliation cases. Verify Claude Code really honors the deny JSON and that local hook timeouts do not undermine your required security boundary.
-7. Verify both Windows PowerShell and one Linux/macOS environment, including `uvx` and the `python` executable.
+7. Verify both Windows PowerShell and one Linux/macOS environment, including `uv` and the `python` executable.
 8. Run a second-person security review of consent, plugin installation side effects, and scopes before marketplace submission.
 
 The existing LoopGrid n8n/Dify verified listings do not confer Claude Code verification. Community acceptance and Anthropic verification are separate decisions.

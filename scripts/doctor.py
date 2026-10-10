@@ -29,7 +29,8 @@ def main():
     print("project root for diagnostic:", project)
     print("project hook activation:", project_opted_in({"CLAUDE_PROJECT_DIR": project}))
     print("project activation marker:", str(Path(project) / PROJECT_OPT_IN))
-    print("uvx available:", bool(shutil.which("uvx")))
+    print("uv available:", bool(shutil.which("uv")))
+    print("MCP uv.lock present:", (Path(__file__).resolve().parents[1] / "uv.lock").is_file())
     print("python version:", sys.version.split()[0])
     try:
         with urlopen(c["base"] + "/ready", timeout=5) as r:
