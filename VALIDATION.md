@@ -46,3 +46,7 @@
 8. Run a second-person security review of consent, plugin installation side effects, and scopes before marketplace submission.
 
 The existing LoopGrid n8n/Dify verified listings do not confer Claude Code verification. Community acceptance and Anthropic verification are separate decisions.
+
+## Project activation security patch (post-GitHub candidate)
+
+Before marketplace submission, an additional project-scoping gate was introduced. Hooks now require `.loopgrid/claude-code.enabled` at `CLAUDE_PROJECT_DIR` as well as an explicit observe/enforce mode, and check the marker before reading tool JSON or accessing local/remote state. The original real Claude Code runtime tests were executed before this gate and are still valid for the authorization logic, but a new Windows smoke test is required with the activation marker present.

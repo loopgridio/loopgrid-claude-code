@@ -13,3 +13,6 @@ loopgrid-evidence/
 examples/sandbox_mcp/
 .venv*/
 *.sqlite3-*
+
+# Deliberate per-project hook activation; do not commit local opt-in by accident
+.loopgrid/claude-code.enabled

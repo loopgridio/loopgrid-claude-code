@@ -40,7 +40,7 @@ Claude Code
 
 ### Privacy and installation behavior
 
-The plugin includes three registered tool lifecycle hooks (`PreToolUse`, `PostToolUse`, `PostToolUseFailure`) for matching Bash, file-edit and MCP tools. **Automatic hook capture is off by default.** An operator explicitly enables `observe` or `enforce` in the environment **before launching Claude Code**. When enabled, the bridge can contact the operator-configured LoopGrid Core over HTTPS (or local loopback HTTP) and send the tool name, canonical input/result SHA-256 commitments, hashed session/tool-use IDs, and a numeric `amount` field if the tool arguments provide one. Raw hook arguments and results are not sent by this bridge. Tool content may include low-entropy values whose hashes are guessable. See [SECURITY.md](SECURITY.md).
+The plugin includes three registered tool lifecycle hooks (`PreToolUse`, `PostToolUse`, `PostToolUseFailure`) for matching Bash, file-edit and MCP tools. **Automatic hook capture is off by default and requires a project activation file.** An operator explicitly enables `observe` or `enforce` in the environment **before launching Claude Code**, and opts in each project by placing `.loopgrid/claude-code.enabled` in its root. When enabled, the bridge can contact the operator-configured LoopGrid Core over HTTPS (or local loopback HTTP) and send the tool name, canonical input/result SHA-256 commitments, hashed session/tool-use IDs, and a numeric `amount` field if the tool arguments provide one. Raw hook arguments and results are not sent by this bridge. Tool content may include low-entropy values whose hashes are guessable. See [SECURITY.md](SECURITY.md).
 
 The bundled MCP configuration starts the independently published `loopgrid-mcp==0.1.0` through `uvx`, which **downloads the Python package and its dependencies on first use** if not cached. MCP tools record data only when invoked and may send additional operator-approved decision content to the connected Core; the default evidence export excludes payloads. The plugin has **no analytics endpoint or separate usage telemetry**. Review the declared LoopGrid endpoint and credentials before enabling capture. Enabling this plugin is not an authorization to send unrelated sensitive tool data.
 
@@ -68,7 +68,7 @@ The plugin can also be distributed through a GitHub Claude Code marketplace. The
 
 ### Validated with real Claude Code on Windows
 
-The v0.1.0 integration has been tested in Claude Code 2.1.292 on Windows with LoopGrid Core 0.8.1: **40/40 Python tests**, valid plugin manifest, six connected LoopGrid MCP tools, all four skills and three registered hooks, a real observed Bash tool result, and independently verified attested evidence bundles. A configured policy permitted a harmless **$25 sandbox MCP action exactly once**, denied a **$2,500 sandbox action with zero executions**, and returned `manual_review_required` for a generic Bash action without the policy's required amount. The amount-25 and review-required decisions had valid Core evidence; independent offline verification was also completed for the observed Bash action and review-required denial. No financial transaction occurred.
+The v0.1.0 integration has been tested in Claude Code 2.1.292 on Windows with LoopGrid Core 0.8.1: **40/40 Windows Python tests on the previous candidate; 44/44 local tests on the project-scoped update (Windows retest pending)**, valid plugin manifest, six connected LoopGrid MCP tools, all four skills and three registered hooks, a real observed Bash tool result, and independently verified attested evidence bundles. A configured policy permitted a harmless **$25 sandbox MCP action exactly once**, denied a **$2,500 sandbox action with zero executions**, and returned `manual_review_required` for a generic Bash action without the policy's required amount. The amount-25 and review-required decisions had valid Core evidence; independent offline verification was also completed for the observed Bash action and review-required denial. No financial transaction occurred.
 
 The isolated five-event sandbox Core test passed with `evidence_complete` and valid signatures. A *separate historical* `default` test workspace has a chain mismatch at sequence 89. No evidence was erased or rewritten; see [VALIDATION.md](VALIDATION.md) for the distinction. Tests do not establish that this plugin has been endorsed or reviewed by Anthropic.
 
@@ -85,13 +85,22 @@ Integrity verification supports evidence provenance and tamper detection; it doe
 
 ## Optional native Claude Code hook modes
 
-By default `LOOPGRID_CLAUDE_MODE=off`: the MCP and skill tools work, but automatic background hooks do not capture evidence or block tool calls. This avoids surprising new users with tool interception.
+By default `LOOPGRID_CLAUDE_MODE=off`: the MCP and skill tools work, but automatic background hooks do not capture evidence or block tool calls. The hooks also require an **explicit project-local activation marker**: `.loopgrid/claude-code.enabled` in the root folder reported by `CLAUDE_PROJECT_DIR`. Without both opt-ins, they exit **before reading tool input**, opening SQLite, or sending network requests. This keeps hook capture out of unrelated projects.
 
 | Mode | Behavior |
 |---|---|
 | `off` | No automatic tool interception; MCP and skills still work |
 | `observe` | Best-effort decision/tool-result evidence for selected tools; Core errors do not block actions; missed records are possible |
 | `enforce` | Selected tools require an actual Core policy result `auto_allowed`, persisted before execution; unavailable Core or missing policy denies the call |
+
+For a project you intentionally want to govern, create the empty marker **in that project's root** (not in the installed plugin directory unless you are specifically testing that project):
+
+```powershell
+New-Item -ItemType Directory -Force .loopgrid | Out-Null
+New-Item -ItemType File -Force .loopgrid\claude-code.enabled | Out-Null
+```
+
+Only do this in projects whose operators have opted into tool capture. The marker contains no secrets; removing it disables hook processing for that project. The default `.gitignore` ignores this marker in the LoopGrid source repository. Hook processes locate the project via Claude Code's `CLAUDE_PROJECT_DIR`; if that variable is not provided, hooks do not activate.
 
 Configure **before launching Claude Code**:
 
@@ -128,7 +137,7 @@ This creates a **fresh isolated test workspace and sandbox policy**, records a s
 
 ## Validation and release
 
-This is a tested Claude Code plugin **not yet marketplace approved or endorsed**. The existing LoopGrid MCP tool contract and Python Agent SDK are separate integrations. All Windows validation results and the boundaries of the tests are recorded in [VALIDATION.md](VALIDATION.md). Real Claude Code runtime discovery, hook observation/enforcement, and independent offline verification were demonstrated; we still recommend a second-person security/privacy review and macOS/Linux smoke test before submitting for community review.
+This is a tested Claude Code plugin **not yet marketplace approved or endorsed**. Project-scoped hook activation was added after the successful initial Windows runtime tests and requires a separate Windows regression/smoke run before submission. The existing LoopGrid MCP tool contract and Python Agent SDK are separate integrations. All Windows validation results and the boundaries of the tests are recorded in [VALIDATION.md](VALIDATION.md). Real Claude Code runtime discovery, hook observation/enforcement, and independent offline verification were demonstrated; we still recommend a second-person security/privacy review and macOS/Linux smoke test before submitting for community review.
 
 ```powershell
 python -m unittest discover -s tests -v
@@ -136,7 +145,7 @@ python -m compileall -q scripts
 claude plugin validate .
 ```
 
-**Repository (to create):** https://github.com/loopgridio/loopgrid-claude-code  
+**Repository:** https://github.com/loopgridio/loopgrid-claude-code  
 **LoopGrid:** https://loopgrid.io  
 **Support:** hello@loopgrid.io  
 **License:** Apache-2.0

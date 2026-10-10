@@ -290,16 +290,54 @@ class HookTests(unittest.TestCase):
         self.assertNotEqual(hook.digest({"a": 1}), hook.digest({"a": 2}))
 
     def test_enforce_missing_input_denies_in_cli(self):
-        with patch.dict(os.environ, {"LOOPGRID_CLAUDE_MODE":"enforce", "LOOPGRID_BASE_URL":"http://127.0.0.1:8000"}):
+        (Path(self.d.name) / ".loopgrid").mkdir()
+        (Path(self.d.name) / hook.PROJECT_OPT_IN).touch()
+        with patch.dict(os.environ, {"LOOPGRID_CLAUDE_MODE":"enforce", "LOOPGRID_BASE_URL":"http://127.0.0.1:8000", "CLAUDE_PROJECT_DIR":self.d.name}):
             out = io.StringIO()
             self.assertEqual(hook.run(["pre"], stdin=io.StringIO("not json"), stdout=out), 0)
             self.assertEqual(json.loads(out.getvalue())["hookSpecificOutput"]["permissionDecision"], "deny")
 
     def test_misspelled_enforce_mode_does_not_fail_open(self):
-        with patch.dict(os.environ, {"LOOPGRID_CLAUDE_MODE":"enfroce", "LOOPGRID_BASE_URL":"http://127.0.0.1:8000"}):
+        (Path(self.d.name) / ".loopgrid").mkdir()
+        (Path(self.d.name) / hook.PROJECT_OPT_IN).touch()
+        with patch.dict(os.environ, {"LOOPGRID_CLAUDE_MODE":"enfroce", "LOOPGRID_BASE_URL":"http://127.0.0.1:8000", "CLAUDE_PROJECT_DIR":self.d.name}):
             out = io.StringIO()
             self.assertEqual(hook.run(["pre"], stdin=io.StringIO(json.dumps(case())), stdout=out), 0)
             self.assertEqual(json.loads(out.getvalue())["hookSpecificOutput"]["permissionDecision"], "deny")
+
+    def test_project_requires_explicit_activation(self):
+        self.assertFalse(hook.project_opted_in({}))
+        self.assertFalse(hook.project_opted_in({"CLAUDE_PROJECT_DIR":self.d.name}))
+        self.assertFalse(hook.project_opted_in({"CLAUDE_PROJECT_DIR":"relative"}))
+        (Path(self.d.name) / ".loopgrid").mkdir()
+        (Path(self.d.name) / hook.PROJECT_OPT_IN).touch()
+        self.assertTrue(hook.project_opted_in({"CLAUDE_PROJECT_DIR":self.d.name}))
+
+    def test_unrelated_project_never_reads_hook_payload(self):
+        class NoRead:
+            def read(self, *args):
+                raise AssertionError("Unrelated project hook read tool data")
+        for mode in ("observe", "enforce"):
+            with patch.dict(os.environ, {"LOOPGRID_CLAUDE_MODE":mode, "CLAUDE_PROJECT_DIR":self.d.name}):
+                out=io.StringIO()
+                with patch.object(hook, "_api", side_effect=AssertionError("Unexpected network access")):
+                    self.assertEqual(hook.run(["pre"], stdin=NoRead(), stdout=out), 0)
+                self.assertEqual(out.getvalue(), "")
+        self.assertFalse(self.cfg["state"].exists())
+
+    def test_enabled_project_dispatches_native_pre_hook(self):
+        (Path(self.d.name) / ".loopgrid").mkdir()
+        (Path(self.d.name) / hook.PROJECT_OPT_IN).touch()
+        with patch.dict(os.environ, {"LOOPGRID_CLAUDE_MODE":"observe", "CLAUDE_PROJECT_DIR":self.d.name}):
+            with patch.object(hook, "pre", return_value=None) as actual:
+                self.assertEqual(hook.run(["pre"], stdin=io.StringIO(json.dumps(case())), stdout=io.StringIO()),0)
+                actual.assert_called_once()
+
+    def test_marker_in_another_project_cannot_activate_this_project(self):
+        (Path(self.d.name) / ".loopgrid").mkdir()
+        (Path(self.d.name) / hook.PROJECT_OPT_IN).touch()
+        with tempfile.TemporaryDirectory() as other:
+            self.assertFalse(hook.project_opted_in({"CLAUDE_PROJECT_DIR":other}))
 
     def test_missing_tool_result_does_not_forge_execution(self):
         with self.core.patched():

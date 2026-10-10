@@ -21,6 +21,7 @@ from urllib.request import Request, build_opener, HTTPRedirectHandler
 
 MAX_HOOK_BYTES = 2 * 1024 * 1024
 DEFAULT_TOOLS = "Bash,Write,Edit,MultiEdit,NotebookEdit,mcp__*"
+PROJECT_OPT_IN = Path(".loopgrid") / "claude-code.enabled"
 
 
 class HookFailure(RuntimeError):
@@ -50,6 +51,25 @@ def config(env=None):
         "policy": env.get("LOOPGRID_CLAUDE_POLICY_ID", "").strip(),
         "tools": patterns, "state": root / "hook_state.sqlite3",
     }
+
+
+def project_opted_in(env=None):
+    """Only capture tool activity in a project that explicitly enabled LoopGrid.
+
+    CLAUDE_PROJECT_DIR is supplied by Claude Code to command hooks. The
+    project marker is checked BEFORE reading any hook event JSON, touching
+    SQLite, or making network requests. No directory traversal or global
+    project scanning is performed. Do not fall back to the plugin install
+    directory, which would enable unrelated sessions.
+    """
+    env = os.environ if env is None else env
+    raw_root = env.get("CLAUDE_PROJECT_DIR", "")
+    if not raw_root:
+        return False
+    root = Path(raw_root)
+    if not root.is_absolute():
+        return False
+    return (root / PROJECT_OPT_IN).is_file()
 
 
 def protected(name, cfg):
@@ -236,9 +256,13 @@ def run(argv=None, stdin=None, stdout=None):
     if len(argv) != 1 or argv[0] not in {"pre", "post", "failure"}:
         return 2
     try:
-        cfg = config()
-        if cfg["mode"] == "off":
+        # Unenabled projects must not have their tool input read by this
+        # broadly matched hook. The global mode is a separate opt-in.
+        if os.environ.get("LOOPGRID_CLAUDE_MODE", "off").strip().lower() == "off":
             return 0
+        if not project_opted_in():
+            return 0
+        cfg = config()
         raw = stdin.read(MAX_HOOK_BYTES + 1)
         if len(raw.encode("utf-8")) > MAX_HOOK_BYTES:
             raise HookFailure("Hook input exceeds 2 MB")

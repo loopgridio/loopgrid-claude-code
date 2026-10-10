@@ -12,7 +12,9 @@
 - [x] Corrected isolated-workspace E2E passed in local Core source test harness v0.8.0.
 - [x] Identify original `default` workspace verification failure at seq 89 without deleting/mutating evidence. Investigation of its historical origin is separate and open.
 - [x] Export attested evidence ZIPs for real observed execution and policy-review denial and independently verify with `loopgrid-verify`.
-- [ ] Publish independent GitHub repository, run CI, review permissions and license with a second reviewer.
+- [x] Publish independent GitHub repository and validate GitHub Actions (`632bcf0`, green).
+- [ ] Publish and Windows-validate the project-scoping security patch (recheck CI).
+- [ ] Obtain a second-person permissions/privacy review before marketplace submission.
 - [ ] Submit to Anthropic community plugin form (NOT a direct PR to the official plugin repository).
 - [ ] Community directory approval recorded only after Anthropic actually approves.
 

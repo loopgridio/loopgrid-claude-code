@@ -2,6 +2,7 @@
 """Check environment, optional CLI dependencies, and LoopGrid Core connectivity."""
 from __future__ import annotations
 import importlib.util
+import os
 from pathlib import Path
 import shutil
 import sys
@@ -9,7 +10,7 @@ from urllib.error import URLError
 from urllib.request import urlopen
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from loopgrid_hook import config
+from loopgrid_hook import config, project_opted_in, PROJECT_OPT_IN
 
 
 def main():
@@ -24,6 +25,10 @@ def main():
     print("base:", c["base"])
     print("configured service key:", bool(c["key"]))
     print("configured policy:", bool(c["policy"]))
+    project = os.environ.get("CLAUDE_PROJECT_DIR") or str(Path.cwd())
+    print("project root for diagnostic:", project)
+    print("project hook activation:", project_opted_in({"CLAUDE_PROJECT_DIR": project}))
+    print("project activation marker:", str(Path(project) / PROJECT_OPT_IN))
     print("uvx available:", bool(shutil.which("uvx")))
     print("python version:", sys.version.split()[0])
     try:
