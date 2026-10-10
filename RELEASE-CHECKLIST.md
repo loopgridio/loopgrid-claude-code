@@ -4,7 +4,7 @@
 - [x] Reuse published loopgrid-mcp 0.1.0 instead of maintaining a duplicate MCP implementation.
 - [x] Distinguish proposed/policy/review/executed/outcome/verified evidence; no false complete claims.
 - [x] Default safe opt-in for automatic hooks; deterministic, selective fail-closed enforcement mode.
-- [x] Local Python unit and serialization tests green in Linux sandbox (40 tests, 12 repeated runs).
+- [x] Local Python unit and serialization tests green; expanded project-scoping suite passed 44 tests on Windows.
 - [x] Windows rerun 40/40 passing after SQLite cleanup fix.
 - [x] `claude plugin validate .` green on Claude Code 2.1.292 (Windows).
 - [x] Real Claude Code MCP discovery (6 tools) and all four skills / three hook registrations verified.
@@ -12,10 +12,10 @@
 - [x] Corrected isolated-workspace E2E passed in local Core source test harness v0.8.0.
 - [x] Identify original `default` workspace verification failure at seq 89 without deleting/mutating evidence. Investigation of its historical origin is separate and open.
 - [x] Export attested evidence ZIPs for real observed execution and policy-review denial and independently verify with `loopgrid-verify`.
-- [x] Publish independent GitHub repository and validate GitHub Actions (`632bcf0`, green).
-- [ ] Publish and Windows-validate the project-scoping security patch (recheck CI).
+- [x] Publish independent GitHub repository and validate GitHub Actions (`632bcf0` initial; `32aa224` project-scoping update, both green).
+- [x] Publish and Windows-validate the project-scoping security patch: 44/44 tests, strict plugin validation, live opted-in Bash result capture (`dec_0f7044dc46f342fb85a78288`), GitHub CI green.
 - [ ] Obtain a second-person permissions/privacy review before marketplace submission.
 - [ ] Submit to Anthropic community plugin form (NOT a direct PR to the official plugin repository).
 - [ ] Community directory approval recorded only after Anthropic actually approves.
 
-The runtime hook, MCP discovery and offline-verification gates passed on Windows. Publishing and independent submission review remain separate milestones.
+The runtime hook, MCP discovery, project-scoped observation, policy allow/deny and offline-verification gates passed on Windows. Anthropic marketplace submission/review and any third-party permissions review remain separate milestones.

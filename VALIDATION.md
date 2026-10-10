@@ -14,7 +14,7 @@
 
 ## Validated on Windows (October 2026)
 
-- 40/40 standard-library Python security/contract tests passed after Windows SQLite cleanup and policy-denial wording fixes (`python -m unittest discover -s tests -q`); compilation passed.
+- 44/44 standard-library Python security/contract tests passed on Windows after SQLite cleanup, denial wording, and project-scoped activation changes (`python -m unittest discover -s tests -q`); compilation passed.
 - `claude plugin validate .` passed using **Claude Code CLI 2.1.292**. `uvx 0.12.17` available.
 - `claude --plugin-dir .` loaded the four skills (`decision`, `review`, `verify`, `guard`) and all three plugin hooks (`PreToolUse`, `PostToolUse`, `PostToolUseFailure`). The `loopgrid` MCP server connected and exposed six tools.
 - **Real runtime observation:** Claude Code executed Bash `echo LOOPGRID_CLAUDE_HOOK_TEST` once, the plugin persisted `result_recorded` for a decision with three signed events, Core verification returned valid, and exported attested bundle `dec_d051d1d4563e4c20a89fec88` independently passed `loopgrid-verify==0.1.0`.
@@ -49,4 +49,4 @@ The existing LoopGrid n8n/Dify verified listings do not confer Claude Code verif
 
 ## Project activation security patch (post-GitHub candidate)
 
-Before marketplace submission, an additional project-scoping gate was introduced. Hooks now require `.loopgrid/claude-code.enabled` at `CLAUDE_PROJECT_DIR` as well as an explicit observe/enforce mode, and check the marker before reading tool JSON or accessing local/remote state. The original real Claude Code runtime tests were executed before this gate and are still valid for the authorization logic, but a new Windows smoke test is required with the activation marker present.
+Before marketplace submission, an additional project-scoping gate was introduced. Hooks require `.loopgrid/claude-code.enabled` at `CLAUDE_PROJECT_DIR` as well as an explicit observe/enforce mode, and check the marker before reading tool JSON or accessing local/remote state. The 44/44 Windows regression tests and strict plugin validation passed. In a new live Claude Code session in an opted-in project, Bash `echo LOOPGRID_SCOPED_ACTIVATION_TEST` executed once; the hook ledger recorded a new `result_recorded` decision `dec_0f7044dc46f342fb85a78288`. This scoped-hook smoke test confirms callback persistence; independent offline cryptographic verification of this particular new decision was not repeated. The earlier observed execution and policy-denial decisions did pass offline verification.
