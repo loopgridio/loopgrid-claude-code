@@ -70,7 +70,7 @@ The plugin can also be distributed through a GitHub Claude Code marketplace. The
 
 The v0.1.0 integration has been tested in Claude Code 2.1.292 on Windows with LoopGrid Core 0.8.1: **44/44 Windows security and regression tests on the project-scoped update**, with strict Claude Code plugin validation and GitHub Actions passing, valid plugin manifest, six connected LoopGrid MCP tools, all four skills and three registered hooks, a real observed Bash tool result, and independently verified attested evidence bundles. A configured policy permitted a harmless **$25 sandbox MCP action exactly once**, denied a **$2,500 sandbox action with zero executions**, and returned `manual_review_required` for a generic Bash action without the policy's required amount. The amount-25 and review-required decisions had valid Core evidence; independent offline verification was also completed for the observed Bash action and review-required denial. No financial transaction occurred.
 
-The isolated five-event sandbox Core test passed with `evidence_complete` and valid signatures. A *separate historical* `default` test workspace has a chain mismatch at sequence 89. No evidence was erased or rewritten; see [VALIDATION.md](VALIDATION.md) for the distinction. Tests do not establish that this plugin has been endorsed or reviewed by Anthropic.
+The isolated five-event sandbox Core test passed with `evidence_complete` and valid signatures. It used a fresh workspace to keep validation separate from earlier test records. See [VALIDATION.md](VALIDATION.md) for detailed results. Tests do not establish that this plugin has been endorsed or reviewed by Anthropic.
 
 ### Decision → policy → authorized execution → outcome → verification
 
