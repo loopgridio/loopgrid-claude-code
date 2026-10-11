@@ -469,10 +469,27 @@ class FormatTests(unittest.TestCase):
         spec = spec_from_file_location("lg_doctor", root / "scripts/doctor.py")
         module = module_from_spec(spec)
         spec.loader.exec_module(module)
+        # The diagnostic should succeed when its prerequisites are present.
+        # CI runners do not necessarily have uv installed, so mock the
+        # prerequisite explicitly rather than depending on the host PATH.
         with patch.dict(os.environ, {"LOOPGRID_BASE_URL": "http://127.0.0.1:8000",
                                       "LOOPGRID_CLAUDE_MODE": "off"}), \
+             patch.object(module.shutil, "which", return_value="uv-present-for-test"), \
              patch("socket.socket", side_effect=AssertionError("no sockets in doctor")):
             self.assertEqual(module.main(), 0)
+
+    def test_offline_doctor_reports_missing_uv_without_network(self):
+        from importlib.util import module_from_spec, spec_from_file_location
+        root = Path(__file__).resolve().parents[1]
+        spec = spec_from_file_location("lg_doctor_no_uv", root / "scripts/doctor.py")
+        module = module_from_spec(spec)
+        spec.loader.exec_module(module)
+        # Missing uv is a genuine installation error, not a network request.
+        with patch.dict(os.environ, {"LOOPGRID_BASE_URL": "http://127.0.0.1:8000",
+                                      "LOOPGRID_CLAUDE_MODE": "off"}), \
+             patch.object(module.shutil, "which", return_value=None), \
+             patch("socket.socket", side_effect=AssertionError("no sockets in doctor")):
+            self.assertEqual(module.main(), 1)
 
     def test_hooks_do_not_auto_allow(self):
         root = Path(__file__).resolve().parents[1]
