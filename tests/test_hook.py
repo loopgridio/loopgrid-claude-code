@@ -275,12 +275,12 @@ class HookTests(unittest.TestCase):
 
     def test_config_https_remote(self):
         with self.assertRaises(hook.HookFailure):
-            hook.config({"LOOPGRID_BASE_URL": "http://example.org", "LOOPGRID_CLAUDE_MODE": "enforce"})
-        self.assertEqual(hook.config({"LOOPGRID_BASE_URL": "https://example.org"})["base"], "https://example.org")
+            hook.config({"LOOPGRID_BASE_URL": "http://192.0.2.1", "LOOPGRID_CLAUDE_MODE": "enforce"})
+        self.assertEqual(hook.config({"LOOPGRID_BASE_URL": "https://192.0.2.1"})["base"], "https://192.0.2.1")
 
     def test_config_reject_embedded_credentials(self):
         with self.assertRaises(hook.HookFailure):
-            hook.config({"LOOPGRID_BASE_URL":"https://someone:pwd@example.org"})
+            hook.config({"LOOPGRID_BASE_URL":"https://someone:pwd@192.0.2.1"})
 
     def test_config_reject_bad_mode(self):
         with self.assertRaises(hook.HookFailure):
@@ -293,18 +293,18 @@ class HookTests(unittest.TestCase):
     def test_enforce_missing_input_denies_in_cli(self):
         (Path(self.d.name) / ".loopgrid").mkdir()
         (Path(self.d.name) / hook.PROJECT_OPT_IN).touch()
-        with patch.dict(os.environ, {"LOOPGRID_CLAUDE_MODE":"enforce", "LOOPGRID_BASE_URL":"http://127.0.0.1:8000", "CLAUDE_PROJECT_DIR":self.d.name}):
-            out = io.StringIO()
-            self.assertEqual(hook.run(["pre"], stdin=io.StringIO("not json"), stdout=out), 0)
-            self.assertEqual(json.loads(out.getvalue())["hookSpecificOutput"]["permissionDecision"], "deny")
+        env = {"LOOPGRID_CLAUDE_MODE":"enforce", "LOOPGRID_BASE_URL":"http://127.0.0.1:8000", "CLAUDE_PROJECT_DIR":self.d.name}
+        out = io.StringIO()
+        self.assertEqual(hook.run(["pre"], stdin=io.StringIO("not json"), stdout=out, env=env), 0)
+        self.assertEqual(json.loads(out.getvalue())["hookSpecificOutput"]["permissionDecision"], "deny")
 
     def test_misspelled_enforce_mode_does_not_fail_open(self):
         (Path(self.d.name) / ".loopgrid").mkdir()
         (Path(self.d.name) / hook.PROJECT_OPT_IN).touch()
-        with patch.dict(os.environ, {"LOOPGRID_CLAUDE_MODE":"enfroce", "LOOPGRID_BASE_URL":"http://127.0.0.1:8000", "CLAUDE_PROJECT_DIR":self.d.name}):
-            out = io.StringIO()
-            self.assertEqual(hook.run(["pre"], stdin=io.StringIO(json.dumps(case())), stdout=out), 0)
-            self.assertEqual(json.loads(out.getvalue())["hookSpecificOutput"]["permissionDecision"], "deny")
+        env = {"LOOPGRID_CLAUDE_MODE":"enfroce", "LOOPGRID_BASE_URL":"http://127.0.0.1:8000", "CLAUDE_PROJECT_DIR":self.d.name}
+        out = io.StringIO()
+        self.assertEqual(hook.run(["pre"], stdin=io.StringIO(json.dumps(case())), stdout=out, env=env), 0)
+        self.assertEqual(json.loads(out.getvalue())["hookSpecificOutput"]["permissionDecision"], "deny")
 
     def test_project_requires_explicit_activation(self):
         self.assertFalse(hook.project_opted_in({}))
@@ -319,20 +319,20 @@ class HookTests(unittest.TestCase):
             def read(self, *args):
                 raise AssertionError("Unrelated project hook read tool data")
         for mode in ("observe", "enforce"):
-            with patch.dict(os.environ, {"LOOPGRID_CLAUDE_MODE":mode, "CLAUDE_PROJECT_DIR":self.d.name}):
-                out=io.StringIO()
-                with patch.object(hook, "_api", side_effect=AssertionError("Unexpected network access")):
-                    self.assertEqual(hook.run(["pre"], stdin=NoRead(), stdout=out), 0)
-                self.assertEqual(out.getvalue(), "")
+            env = {"LOOPGRID_CLAUDE_MODE":mode, "CLAUDE_PROJECT_DIR":self.d.name}
+            out=io.StringIO()
+            with patch.object(hook, "_api", side_effect=AssertionError("Unexpected network access")):
+                self.assertEqual(hook.run(["pre"], stdin=NoRead(), stdout=out, env=env), 0)
+            self.assertEqual(out.getvalue(), "")
         self.assertFalse(self.cfg["state"].exists())
 
     def test_enabled_project_dispatches_native_pre_hook(self):
         (Path(self.d.name) / ".loopgrid").mkdir()
         (Path(self.d.name) / hook.PROJECT_OPT_IN).touch()
-        with patch.dict(os.environ, {"LOOPGRID_CLAUDE_MODE":"observe", "CLAUDE_PROJECT_DIR":self.d.name}):
-            with patch.object(hook, "pre", return_value=None) as actual:
-                self.assertEqual(hook.run(["pre"], stdin=io.StringIO(json.dumps(case())), stdout=io.StringIO()),0)
-                actual.assert_called_once()
+        env = {"LOOPGRID_CLAUDE_MODE":"observe", "CLAUDE_PROJECT_DIR":self.d.name}
+        with patch.object(hook, "pre", return_value=None) as actual:
+            self.assertEqual(hook.run(["pre"], stdin=io.StringIO(json.dumps(case())), stdout=io.StringIO(), env=env),0)
+            actual.assert_called_once()
 
     def test_marker_in_another_project_cannot_activate_this_project(self):
         (Path(self.d.name) / ".loopgrid").mkdir()
@@ -359,8 +359,8 @@ class HookTests(unittest.TestCase):
         self.assertEqual(len(self.core.requests), initial)
 
     def test_off_cli_does_not_read_input(self):
-        with patch.dict(os.environ, {"LOOPGRID_CLAUDE_MODE":"off", "LOOPGRID_BASE_URL":"http://127.0.0.1:8000"}):
-            self.assertEqual(hook.run(["pre"], stdin=io.StringIO("invalid"), stdout=io.StringIO()), 0)
+        env = {"LOOPGRID_CLAUDE_MODE":"off", "LOOPGRID_BASE_URL":"http://127.0.0.1:8000"}
+        self.assertEqual(hook.run(["pre"], stdin=io.StringIO("invalid"), stdout=io.StringIO(), env=env), 0)
 
     def test_result_hash_not_status_duplicated(self):
         with self.core.patched():
@@ -437,16 +437,12 @@ class FormatTests(unittest.TestCase):
 
     def test_mcp_server_pinned_version(self):
         root = Path(__file__).resolve().parents[1]
-        data = json.loads((root / ".mcp.json").read_text())
-        args = data["mcpServers"]["loopgrid"]["args"]
-        self.assertEqual(data["mcpServers"]["loopgrid"]["command"], "uv")
-        self.assertIn("--locked", args)
-        self.assertIn("${CLAUDE_PLUGIN_ROOT}/scripts/launch_mcp.py", args)
+        server = json.loads((root / ".mcp.json").read_text())["mcpServers"]["loopgrid"]
+        self.assertEqual(server["command"], "uvx")
+        self.assertEqual(server["args"], ["loopgrid-claude-launcher==0.1.0"])
+        self.assertEqual(server["env"]["LOOPGRID_CLAUDE_PLUGIN"], "1")
         project = (root / "pyproject.toml").read_text(encoding="utf-8")
-        self.assertIn('"loopgrid-mcp==0.1.0"', project)
-        # The marketplace release must have a registry-generated uv.lock too.
-        # It is produced on the connected Windows machine, never fabricated.
-
+        self.assertIn('"loopgrid-claude-launcher==0.1.0"', project)
 
     def test_plugin_user_config_sensitive(self):
         root = Path(__file__).resolve().parents[1]
@@ -461,29 +457,22 @@ class FormatTests(unittest.TestCase):
         cfg2 = hook.config({"LOOPGRID_SERVICE_KEY": "bad", "CLAUDE_PLUGIN_OPTION_SERVICE_KEY":"claude-secure-key"})
         self.assertEqual(cfg2["key"], "claude-secure-key")
 
-    def test_mcp_wrapper_credentials_and_options(self):
-        root = Path(__file__).resolve().parents[1]
-        import importlib.util
-        spec = importlib.util.spec_from_file_location("lg_launch", root/"scripts/launch_mcp.py")
-        wrapper = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(wrapper)
-        out = wrapper.prepare_environment({"LOOPGRID_SERVICE_KEY":"inherited", "CLAUDE_PLUGIN_OPTION_SERVICE_KEY":" new-secret ",
-                                           "CLAUDE_PLUGIN_OPTION_CORE_URL":"https://core.example.org", "CLAUDE_PLUGIN_OPTION_WORKSPACE_ID":"ws_public"})
-        self.assertEqual(out["LOOPGRID_SERVICE_KEY"], "new-secret")
-        self.assertEqual(out["LOOPGRID_BASE_URL"], "https://core.example.org")
-        self.assertEqual(out["LOOPGRID_WORKSPACE"], "ws_public")
-        out2 = wrapper.prepare_environment({"LOOPGRID_SERVICE_KEY":"inherited"})
-        self.assertNotIn("LOOPGRID_SERVICE_KEY", out2)
+    def test_offline_origin_check_for_doctor(self):
+        from core_origin import validate_core_origin
+        self.assertEqual(validate_core_origin("https://example.invalid/"), "https://example.invalid")
+        with self.assertRaises(ValueError):
+            validate_core_origin("http://example.invalid")
 
-    def test_square_marketplace_icon(self):
-        import struct
+    def test_offline_doctor_has_no_network_access(self):
+        from importlib.util import module_from_spec, spec_from_file_location
         root = Path(__file__).resolve().parents[1]
-        icon = root/".claude-plugin/icon.png"
-        with icon.open("rb") as fh:
-            header = fh.read(24)
-        self.assertEqual(header[:8], b"\x89PNG\r\n\x1a\n")
-        self.assertEqual(struct.unpack(">II", header[16:24]), (1024, 1024))
-        self.assertLess(icon.stat().st_size, 2*1024*1024)
+        spec = spec_from_file_location("lg_doctor", root / "scripts/doctor.py")
+        module = module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with patch.dict(os.environ, {"LOOPGRID_BASE_URL": "http://127.0.0.1:8000",
+                                      "LOOPGRID_CLAUDE_MODE": "off"}), \
+             patch("socket.socket", side_effect=AssertionError("no sockets in doctor")):
+            self.assertEqual(module.main(), 0)
 
     def test_hooks_do_not_auto_allow(self):
         root = Path(__file__).resolve().parents[1]

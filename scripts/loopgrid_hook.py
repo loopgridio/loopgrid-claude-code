@@ -249,20 +249,21 @@ def post(payload, cfg, failure=False):
     return None
 
 
-def run(argv=None, stdin=None, stdout=None):
+def run(argv=None, stdin=None, stdout=None, env=None):
     argv = sys.argv[1:] if argv is None else argv
     stdin = sys.stdin if stdin is None else stdin
     stdout = sys.stdout if stdout is None else stdout
+    env = os.environ if env is None else env
     if len(argv) != 1 or argv[0] not in {"pre", "post", "failure"}:
         return 2
     try:
         # Unenabled projects must not have their tool input read by this
         # broadly matched hook. The global mode is a separate opt-in.
-        if os.environ.get("LOOPGRID_CLAUDE_MODE", "off").strip().lower() == "off":
+        if env.get("LOOPGRID_CLAUDE_MODE", "off").strip().lower() == "off":
             return 0
-        if not project_opted_in():
+        if not project_opted_in(env):
             return 0
-        cfg = config()
+        cfg = config(env)
         raw = stdin.read(MAX_HOOK_BYTES + 1)
         if len(raw.encode("utf-8")) > MAX_HOOK_BYTES:
             raise HookFailure("Hook input exceeds 2 MB")
@@ -274,9 +275,9 @@ def run(argv=None, stdin=None, stdout=None):
             stdout.write(json.dumps(result) + "\n")
         return 0
     except Exception:
-        if argv[0] == "pre" and os.environ.get("LOOPGRID_CLAUDE_MODE", "off").strip().lower() not in {"off", "observe"}:
+        if argv[0] == "pre" and env.get("LOOPGRID_CLAUDE_MODE", "off").strip().lower() not in {"off", "observe"}:
             stdout.write(json.dumps(deny("Hook error; fail-closed")) + "\n")
-        elif argv[0] in {"post", "failure"} and os.environ.get("LOOPGRID_CLAUDE_MODE", "off").strip().lower() != "off":
+        elif argv[0] in {"post", "failure"} and env.get("LOOPGRID_CLAUDE_MODE", "off").strip().lower() != "off":
             event = "PostToolUse" if argv[0] == "post" else "PostToolUseFailure"
             stdout.write(json.dumps({"hookSpecificOutput": {"hookEventName": event, "additionalContext": "LoopGrid evidence callback failed; inspect the external action and reconcile manually. Do not retry solely to fill evidence."}}) + "\n")
         return 0  # Avoid leaking credentials and stack traces to the model.

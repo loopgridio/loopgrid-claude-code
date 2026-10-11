@@ -1,52 +1,30 @@
-# Validation record — Claude Code plugin 0.1.0 candidate
+# Validation record and limitations
 
-## Tests that can be performed without Claude API credits
+This document distinguishes real user-observed tests from tests still required for the **new** published launcher arrangement.
 
-- Plugin JSON manifest, hook JSON and MCP JSON parse and structure checks.
-- Hook bridge pre/post/failure contract with deterministic Claude Code hook inputs.
-- Only protected tools matched; LoopGrid MCP tools excluded to prevent recursion.
-- Default off behavior; observe-mode best-effort handling; enforce-mode fail-closed without Core/policy.
-- Auto-allowed policy permits normal host permission flow without returning `allow`.
-- Blocked, human-approval-required, and unknown policy results denied.
-- Input mismatch, forged post callback, replay/duplicate tool-use ID denied, SQLite ledger durability.
-- Post-execution evidence persistence failure marked `needs_reconciliation`, with no automatic action replay or fictitious complete outcome.
-- Credential leakage controls and canonical SHA-256 evidence commitments.
+## Completed on Windows (October 11, 2026)
 
-## Validated on Windows (October 2026)
+- Previous `uv run --locked` plugin: 50 Python tests passed; strict Claude Code plugin validation and genuine `uv.lock` check passed.
+- Windows Claude Code 2.1.292: original plugin MCP connected with six LoopGrid tools in a clean disposable project.
+- Original plugin + LoopGrid Core 0.8.1: recorded synthetic proposed refund decisions; retry with same idempotency key replayed without duplicating evidence.
+- Fresh Core workspace `ws_6f03674a26654418`: synthetic five-event Core sandbox policy allow/deny, outcome evidence and signed workspace verification passed.
+- Live Claude Code tool hook: local SQLite showed `Bash | result_recorded`; the corresponding Core decision `dec_009b1bdc33d64086a85eb8a4` verified `valid=true`, three checked decision events, no failures (10 workspace ledger events).
+- Exported signed evidence ZIP: checksum matched; `loopgrid-verify==0.1.0` reported `[OK] VERIFIED`, bundle integrity attested. The signer key ID was supplied from Core; independent real-world signer identity was not established through separately trusted public-key material.
+- A separate historical `default` workspace had a **known ledger hash-chain failure at event 89**. Never claim that workspace passed integrity checks; isolated test workspace was valid.
 
-- 44/44 standard-library Python security/contract tests passed on Windows after SQLite cleanup, denial wording, and project-scoped activation changes (`python -m unittest discover -s tests -q`); compilation passed.
-- `claude plugin validate .` passed using **Claude Code CLI 2.1.292**. `uv 0.12.17` is available in the test environment.
-- `claude --plugin-dir .` loaded the four skills (`decision`, `review`, `verify`, `guard`) and all three plugin hooks (`PreToolUse`, `PostToolUse`, `PostToolUseFailure`). The `loopgrid` MCP server connected and exposed six tools.
-- **Real runtime observation:** Claude Code executed Bash `echo LOOPGRID_CLAUDE_HOOK_TEST` once, the plugin persisted `result_recorded` for a decision with three signed events, Core verification returned valid, and exported attested bundle `dec_d051d1d4563e4c20a89fec88` independently passed `loopgrid-verify==0.1.0`.
-- **Real runtime missing-policy denial:** With `LOOPGRID_CLAUDE_MODE=enforce` and no policy ID, a Bash file-creation attempt failed closed; the file did not exist.
-- **Real configured policy:** Core `claude-sandbox-refund` returned `manual_review_required` for a Bash call without an amount, and Claude Code blocked it. Denied decision `dec_522fa8f2892044b68de07cef` had two valid signed events; its attested bundle passed independent offline verification.
-- **Real policy allow:** Test-only local MCP server `loopgrid_sandbox` invoked `sandbox_refund` with `amount=25` once, `executed_now=true`, `duplicate=false`, and `real_money_moved=false`. Independent SQLite receipt count was one. Hook ledger recorded `result_recorded` for `dec_06181a3ef97b484f9ec8811a`; real Core included `decision_created`, `policy_evaluated`, `tool_requested`, and `tool_result`, with valid Ed25519/SHA-256 verification of all four events. Policy payload is proof-only, so it does not reveal the `auto_allowed` value; the strict enforce bridge code permits tool execution only for exactly that Core verdict.
-- **Real policy block:** The same sandbox MCP server invoked with `amount=2500` was rejected by `PreToolUse` as `blocked`; a read of the test-only server receipt database returned **zero** executions. No real payment ever occurred.
-- **Real Core isolated E2E:** A new workspace (`ws_40da4a0313534178`) produced one local sandbox execution, separately observed outcome, five signed events, `lifecycle=evidence_complete`, and `verificationValid=true` on Core `0.8.1-design-partner`. This is distinct from the Claude tool-observation test, which did not claim an observed downstream outcome.
-- **Historical workspace alert:** The earlier shared `default` workspace has one verifier failure at sequence 89 (`previous_chain_hash_mismatch`, `chain_hash_mismatch`) on another historical decision. The test workspace above is independently valid. The historical failure has **not** been repaired or hidden and must be investigated separately without deleting/reconstructing evidence.
-- The separate local sandbox policy add-on was tested on Windows and is **not part of the publishable plugin**. Real Claude Code sessions use the user's Claude account; none of the evidence E2E actions moved money.
+## Published Claude-only launcher tests
 
-## Additional verification before submission
+- `loopgrid-claude-launcher==0.1.0` was independently published to PyPI from `loopgridio/loopgrid-claude-launcher` using GitHub OIDC trusted publishing.
+- User installed the published package with `uvx --from loopgrid-claude-launcher==0.1.0 loopgrid-claude-launcher`; Windows MCP stdio discovery returned **all six LoopGrid tools**.
+- Security smoke test on the previously built launcher reported inherited AWS and machine-wide LoopGrid service keys filtered, explicitly selected service key forwarded, and remote non-HTTPS Core rejected.
+- Launcher repository GitHub CI was green on Ubuntu, Windows, and macOS (Python 3.12).
 
-- Run `claude plugin validate --strict .` on the exact upload directory if supported by the installed CLI.
-- Publish and confirm GitHub CI on a clean checkout, then test install from the published repository as a new user.
-- Independent reviewer should inspect the default-off, broad hook matcher and network/data disclosures against the community marketplace's safety standards; narrow `LOOPGRID_CLAUDE_TOOLS` to the tools being governed.
-- Test the configured plugin on another operating system and inspect any platform-specific path/stdio issues.
-- Test authenticated Core and production reviewer authority separately if those features are advertised for your customer environment.
+## Pending before the one Claude plugin GitHub push
 
-## Repeatable validation commands and review checklist
+- **Completed:** Generated `uv.lock` on Windows (38 lockfile entries, both LoopGrid 0.1.0 pins, published-registry SHA-256 hashes); `uv lock --check` passed on October 11, 2026.
+- **Completed:** On Windows, 48 Python tests passed and strict Claude manifest validation passed; the plugin source passed Python compilation. **Still pending:** clean Claude Code `--plugin-dir` six-tool discovery **from outside the source folder**, for this exact candidate.
+- Confirm connection to local Core and at least one synthetic decision + successful fresh-workspace verification with the new launcher.
+- Revalidate current Directory draft against the new GitHub commit and inspect scanner/Verified findings. These results remain unknown until the portal scans that commit.
+- Obtain a permissible interpretation of the Directory compliance attestation covering **declared Python lifecycle hooks** before checking the box. Do not claim Anthropic Verified in advance.
 
-1. `python -m unittest discover -s tests -v` in a clean checkout.
-2. `claude plugin validate ./loopgrid-claude-code` (prefer `--strict` after confirming Claude Code version supports it).
-3. Run `claude --plugin-dir ./loopgrid-claude-code`, verify `/mcp`, execute each named skill, confirm `loopgrid-mcp==0.1.0` protocol/transport connects and that the six tools are present.
-4. With local Core v0.8.x, run `python examples/core_sandbox_e2e.py` to create an isolated test workspace and policy, exercise a synthetic tool receipt and separately observed outcome, and verify the test workspace chain. Diagnose the old shared workspace using `python examples/inspect_workspace_integrity.py dec_...`. Then export the evidence ZIP and run standalone `loopgrid-verify` off-host. The script does not itself perform independent offline verification.
-5. Configure `observe` with guarded harmless shell/file calls. Check a per-tool Core record and SQLite correlation. Test a simulated Core outage.
-6. Configure `enforce` with an actual applicable auto-allow policy and sandbox tool. Check authorized, denied, missing policy, changed tool arguments, replay and failure-reconciliation cases. Verify Claude Code really honors the deny JSON and that local hook timeouts do not undermine your required security boundary.
-7. Verify both Windows PowerShell and one Linux/macOS environment, including `uv` and the `python` executable.
-8. Run a second-person security review of consent, plugin installation side effects, and scopes before marketplace submission.
-
-The existing LoopGrid n8n/Dify verified listings do not confer Claude Code verification. Community acceptance and Anthropic verification are separate decisions.
-
-## Project activation security patch (post-GitHub candidate)
-
-Before marketplace submission, an additional project-scoping gate was introduced. Hooks require `.loopgrid/claude-code.enabled` at `CLAUDE_PROJECT_DIR` as well as an explicit observe/enforce mode, and check the marker before reading tool JSON or accessing local/remote state. The 44/44 Windows regression tests and strict plugin validation passed. In a new live Claude Code session in an opted-in project, Bash `echo LOOPGRID_SCOPED_ACTIVATION_TEST` executed once; the hook ledger recorded a new `result_recorded` decision `dec_0f7044dc46f342fb85a78288`. This scoped-hook smoke test confirms callback persistence; independent offline cryptographic verification of this particular new decision was not repeated. The earlier observed execution and policy-denial decisions did pass offline verification.
+The plugin **does not** execute a real refund or other financial action. Tool-result receipts are not independently observed downstream business outcomes.

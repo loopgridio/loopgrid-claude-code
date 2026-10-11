@@ -1,7 +1,7 @@
 {
   "name": "loopgrid",
   "displayName": "LoopGrid Decision Evidence",
-  "description": "Verifiable Claude Code decision evidence: six MCP tools and optional opt-in Pre/Post tool hooks send tool names, hashed inputs/results and numeric policy fields to your configured LoopGrid Core for policy gating and signed verification.",
+  "description": "Verifiable Claude Code decisions: six MCP tools record and verify user-approved evidence in LoopGrid Core. Optional opt-in hooks send tool names, SHA-256 commitments and selected policy fields; no external business actions are executed.",
   "version": "0.1.0",
   "author": {
     "name": "LoopGrid",
@@ -30,5 +30,9 @@
       "required": false,
       "sensitive": true
     }
-  }
+  },
+  "privacyPolicyUrl": "https://loopgrid.io/privacy/",
+  "documentationUrl": "https://github.com/loopgridio/loopgrid-claude-code#readme",
+  "supportUrl": "https://github.com/loopgridio/loopgrid-claude-code#support",
+  "termsOfServiceUrl": "https://loopgrid.io/terms/"
 }

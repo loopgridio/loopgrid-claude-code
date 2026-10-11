@@ -19,6 +19,24 @@ The plugin is separate from the [LoopGrid Claude Agent SDK Python adapter](https
 | Govern selected Claude Code actions | Opt-in `PreToolUse` auto-policy gate, fail-closed in `enforce` mode |
 | Durable local hook correlation | SQLite evidence-state ledger; no raw arguments/results stored |
 
+## Privacy, data handling and support
+
+**[Privacy Policy — LoopGrid](https://loopgrid.io/privacy/)** · [Security disclosure](SECURITY.md) · [Directory reviewer notes](DIRECTORY-REVIEW-NOTES.md) · [Support and privacy questions](mailto:hello@loopgrid.io)
+
+LoopGrid is intended for professional developers and teams, not users under 18. The plugin may **read and store personal data** when a user deliberately records evidence containing identifiers or personal information through the six MCP tools. The operator-selected LoopGrid Core receives these authorized evidence submissions, applies the chosen privacy mode, and may retain decision records and evidence commitments beyond 30 days according to workspace settings and applicable agreements. LoopGrid does not promise a uniform under-30-day retention period. Deleting an optional raw disclosure does not necessarily delete cryptographic evidence commitments or audit metadata.
+
+Automatic tool lifecycle hooks are **off by default** and only read hooked event data when an operator enables observe/enforce mode and opts a project in. Opted-in hooks send the configured Core tool names, SHA-256 commitments of tool inputs/results, hashed session/tool-use IDs, and a numeric amount when present; they do not send raw hook arguments/results. SHA-256 commitments of low-entropy content can reveal information through guessing. Hook state is written locally in SQLite and may persist until the user removes it. In contrast, deliberately invoked MCP tools may send additional user-approved decision/evidence content to Core, including personal data. Neither hooks nor the plugin's MCP tools have an independent analytics or advertising destination. The launcher installs published `loopgrid-claude-launcher==0.1.0` and its dependency `loopgrid-mcp==0.1.0` from the Python package registry when not cached. The checked-in `uv.lock` is an auditable dependency snapshot for Directory review; direct `uvx` execution does not necessarily enforce that project lockfile.
+
+The configured LoopGrid Core may be local/self-hosted or remotely operated by the customer; the data retention and privacy configuration of that Core governs uploaded evidence. See the [Privacy Policy](https://loopgrid.io/privacy/) for details of collected information, processing, sharing, retention and deletion requests.
+
+## Support
+
+For plugin installation problems, configuration questions, vulnerability reports, or data-handling inquiries, contact **hello@loopgrid.io**. Do not include API keys, service credentials, production customer records, or other secrets in messages or public bug reports. Refer to [SECURITY.md](SECURITY.md) when reporting a security issue.
+
+- [Installation and documentation](https://github.com/loopgridio/loopgrid-claude-code#readme)
+- [Privacy policy](https://loopgrid.io/privacy/)
+- [Terms for website/evaluation materials](https://loopgrid.io/terms/)
+
 ## Architecture
 
 ```text
@@ -42,13 +60,13 @@ Claude Code
 
 The plugin includes three registered tool lifecycle hooks (`PreToolUse`, `PostToolUse`, `PostToolUseFailure`) for matching Bash, file-edit and MCP tools. **Automatic hook capture is off by default and requires a project activation file.** An operator explicitly enables `observe` or `enforce` in the environment **before launching Claude Code**, and opts in each project by placing `.loopgrid/claude-code.enabled` in its root. When enabled, the bridge can contact the operator-configured LoopGrid Core over HTTPS (or local loopback HTTP) and send the tool name, canonical input/result SHA-256 commitments, hashed session/tool-use IDs, and a numeric `amount` field if the tool arguments provide one. Raw hook arguments and results are not sent by this bridge. Tool content may include low-entropy values whose hashes are guessable. See [SECURITY.md](SECURITY.md).
 
-The bundled MCP configuration uses `uv run --locked` with the registry-generated `uv.lock` and published `loopgrid-mcp==0.1.0`. It **downloads the locked Python package and its dependencies on first use** if they are not cached. MCP tools record data only when invoked and may send additional operator-approved decision content to the connected Core; the default evidence export excludes payloads. The plugin has **no analytics endpoint or separate usage telemetry**. Review the declared LoopGrid endpoint and credentials before enabling capture. Enabling this plugin is not an authorization to send unrelated sensitive tool data.
+The MCP configuration uses the **published and Windows-tested** pinned `uvx loopgrid-claude-launcher==0.1.0`, which depends on the unchanged published `loopgrid-mcp==0.1.0`. The repository includes a genuine registry-resolved `uv.lock` generated from the published packages (38 resolved packages on Windows, October 11, 2026). `uvx` resolves its own environment at runtime; the adjacent lockfile is an auditable snapshot rather than an enforced runtime lock for the `uvx` invocation. Registry packages and dependencies may download on first use. MCP tools record data only when invoked and may send additional operator-approved decision content to the connected Core; the default evidence export excludes payloads. The plugin has **no analytics endpoint or separate usage telemetry**. Review the declared LoopGrid endpoint and credentials before enabling capture. Enabling this plugin is not an authorization to send unrelated sensitive tool data.
 
 ### Installation
 
-Prerequisites: Claude Code installed, Python 3.10+ available as `python`, `uv` (from the [uv](https://docs.astral.sh/uv/) toolchain) available on PATH, and a reachable LoopGrid v0.8.x Core. The plugin uses the existing published [loopgrid-mcp==0.1.0](https://pypi.org/project/loopgrid-mcp/) and downloads locked dependencies on first launch through `uv run --locked`.
+Prerequisites: Claude Code installed, Python 3.10+ available as `python`, `uv` (from the [uv](https://docs.astral.sh/uv/) toolchain) available on PATH, and a reachable LoopGrid v0.8.x Core for evidence operations. The published Claude-only launcher reuses [loopgrid-mcp==0.1.0](https://pypi.org/project/loopgrid-mcp/) unchanged. The included `uv.lock` has been generated against the published package; confirm it remains current with `uv lock --check` before pushing.
 
-1. Download or clone the repository into a directory named `loopgrid-claude-code` and open a terminal **inside that folder**.
+1. Download or clone the repository into a directory such as `loopgrid-claude-code`. Run the tests and offline `doctor.py` inside that folder. When launching Claude Code for a **plugin smoke test**, start it from a separate disposable project; otherwise Claude Code may also interpret `.mcp.json` as a second, project-level MCP server and report a spurious `CLAUDE_PLUGIN_ROOT` warning.
 2. Set the LoopGrid configuration in the **terminal that starts Claude Code**. For local evaluation on Windows PowerShell:
 
    ```powershell
@@ -58,22 +76,23 @@ Prerequisites: Claude Code installed, Python 3.10+ available as `python`, `uv` (
    # Claude plugin manager (sensitive userConfig, stored securely).
    # For local --plugin-dir smoke tests only, use a session-only
    # CLAUDE_PLUGIN_OPTION_SERVICE_KEY without committing it anywhere.
-   python .\scripts\doctor.py
+   python .\scripts\doctor.py  # Offline configuration check (no network)
    claude plugin validate .
-   claude --plugin-dir .
+   # From a separate, disposable working directory:
+   # claude --plugin-dir "C:\path\to\loopgrid-claude-code"
    ```
 
    For macOS/Linux, export the same environment variables and use `python3` only if your system's `python` is not on PATH; the hook executor requires a command named `python` unless you change the hook config to your interpreter.
 
 3. In Claude Code, use `/mcp` to check that the `loopgrid` server is connected; use `/loopgrid:decision`, `/loopgrid:verify`, `/loopgrid:review`, or `/loopgrid:guard`. The MCP server's review tool is disabled by default. Installing the plugin does not grant review authority.
 
-The plugin declares `core_url`, `workspace_id`, and a sensitive `service_key` using Claude plugin `userConfig`. It never reads an inherited machine-wide `LOOPGRID_SERVICE_KEY` for the hook or MCP launcher; the service key is intentionally sourced from Claude-managed plugin configuration. Local developer testing can set `CLAUDE_PLUGIN_OPTION_SERVICE_KEY` in the launching shell without storing it in the repository. On some Claude graphical clients, plugin `userConfig` prompts may require explicit configuration from the plugin manager or Claude Code terminal.
+The plugin declares `core_url`, `workspace_id`, and a sensitive `service_key` using Claude plugin `userConfig`. It never **uses** an inherited machine-wide `LOOPGRID_SERVICE_KEY` for the hook or MCP launcher; the service key is sourced from Claude-managed plugin configuration. The MCP launcher forwards only a short allowlist of OS/runtime values to the downloaded package, deliberately omitting unrelated environment tokens, `PYTHONPATH`, and proxy credentials. This may require additional setup on machines that rely on a corporate HTTP(S) proxy. Remote Core URLs must use HTTPS; HTTP is permitted only for loopback Core. Local developer testing can set `CLAUDE_PLUGIN_OPTION_SERVICE_KEY` in the launching shell without storing it in the repository. On some Claude graphical clients, plugin `userConfig` prompts may require explicit configuration from the plugin manager or Claude Code terminal.
 
 The plugin can also be distributed through a GitHub Claude Code marketplace. The main manifest is `.claude-plugin/plugin.json`; `.mcp.json`, `hooks/hooks.json`, and `skills/` are at the plugin root.
 
 ### Validated with real Claude Code on Windows
 
-The v0.1.0 integration has been tested in Claude Code 2.1.292 on Windows with LoopGrid Core 0.8.1: **44/44 Windows security and regression tests on the project-scoped update**, with strict Claude Code plugin validation and GitHub Actions passing, valid plugin manifest, six connected LoopGrid MCP tools, all four skills and three registered hooks, a real observed Bash tool result, and independently verified attested evidence bundles. A configured policy permitted a harmless **$25 sandbox MCP action exactly once**, denied a **$2,500 sandbox action with zero executions**, and returned `manual_review_required` for a generic Bash action without the policy's required amount. The amount-25 and review-required decisions had valid Core evidence; independent offline verification was also completed for the observed Bash action and review-required denial. No financial transaction occurred.
+The **previous `uv run --locked` plugin** passed 50 Windows regression/security tests, native Claude Code hook capture, synthetic Core evidence recording and independent attested bundle verification. The **new pinned-`uvx` plugin candidate** passed 48/48 Windows Python tests, Python compilation, `uv lock --check` (38 resolved packages) and Claude Code strict manifest validation. The **published Claude-only launcher** independently exposed all six MCP tools through a Windows stdio client; its GitHub CI passed on Windows, Ubuntu and macOS. A clean Claude Code session using this *exact pinned-`uvx` plugin candidate* remains to be tested before the GitHub update. The previous real-world evidence tests must not be misrepresented as full end-to-end validation of the new launcher arrangement.
 
 The isolated five-event sandbox Core test passed with `evidence_complete` and valid signatures. It used a fresh workspace to keep validation separate from earlier test records. See [VALIDATION.md](VALIDATION.md) for detailed results. Tests do not establish that this plugin has been endorsed or reviewed by Anthropic.
 
@@ -140,15 +159,25 @@ python .\examples\core_sandbox_e2e.py
 
 This creates a **fresh isolated test workspace and sandbox policy**, records a signed decision, obtains a real Core policy result, executes a **local in-memory sandbox action**, captures its tool receipt, separately observes the sandbox's result, records an outcome, checks the full test-workspace evidence chain, and proves an over-limit action is denied. It does not test real Claude Code dispatch or move money.
 
+## Current Directory status and Verified eligibility
+
+The existing Claude Directory entry is a **draft**, not approved or Anthropic Verified. Its previous validation was against the older `uv run --locked` GitHub commit. This version uses a pinned **published** `uvx` Claude-only launcher, retains `loopgrid-mcp==0.1.0`, and includes privacy, documentation, support and terms URLs in `.claude-plugin/plugin.json`. The new scanner result is **unknown until Anthropic revalidates the updated GitHub commit**. No scanner finding or badge is claimed resolved in advance.
+
+`uvx` invokes the package manager **before** the launcher's Python environment filter can run, and `uvx` does not automatically enforce a project `uv.lock`. These are explicitly disclosed residual supply-chain/runtime limitations. The locked dependency snapshot is included for review and cross-checking. Three declared lifecycle hooks run as separate commands outside the MCP process; the Directory compliance statement regarding code execution outside declared MCP servers must be clarified with Anthropic before attestation. See [Directory reviewer notes](DIRECTORY-REVIEW-NOTES.md) and [release checklist](RELEASE-CHECKLIST.md).
+
 ## Validation and release
 
-This is a tested Claude Code plugin **not yet marketplace approved or endorsed**. Project-scoped hook activation was tested on Windows (44/44 tests), and a real opted-in Claude Code project recorded a new Bash tool result (`result_recorded`, decision `dec_0f7044dc46f342fb85a78288`). The existing LoopGrid MCP tool contract and Python Agent SDK are separate integrations. All Windows validation results and the boundaries of the tests are recorded in [VALIDATION.md](VALIDATION.md). Real Claude Code runtime discovery, hook observation/enforcement, and independent offline verification were demonstrated; we still recommend a second-person security/privacy review and macOS/Linux smoke test before submitting for community review.
+The **previous locked-launcher plugin** passed 50 Windows regression/security tests, real Claude Code decision/evidence workflows, live opt-in tool hooks, Core signed-chain verification, and attested standalone ZIP verification. The **separate published `uvx` launcher** passed 7 launcher security tests, Windows six-tool MCP discovery and Ubuntu/Windows/macOS GitHub CI. This candidate plugin's 48 unit tests passed in earlier Windows testing; a clean Claude Code install **using this exact updated plugin with the published launcher** must be smoke-tested before the single GitHub push. Do not confuse the previous full end-to-end tests with end-to-end results for the new launcher arrangement. See [VALIDATION.md](VALIDATION.md).
 
 ```powershell
 python -m unittest discover -s tests -v
-python -m compileall -q scripts
-claude plugin validate .
+python -m compileall -q scripts examples
+uv lock
+uv lock --check
+claude plugin validate --strict .
 ```
+
+This release source **includes the genuine 38-entry `uv.lock` generated on Windows** for `loopgrid-claude-launcher==0.1.0` and unchanged `loopgrid-mcp==0.1.0`. Run `uv lock --check` before the GitHub update. The lock is **not enforced** by the direct `uvx` runtime command; see [SECURITY.md](SECURITY.md).
 
 **Repository:** https://github.com/loopgridio/loopgrid-claude-code  
 **LoopGrid:** https://loopgrid.io  
