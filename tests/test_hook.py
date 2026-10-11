@@ -275,12 +275,12 @@ class HookTests(unittest.TestCase):
 
     def test_config_https_remote(self):
         with self.assertRaises(hook.HookFailure):
-            hook.config({"LOOPGRID_BASE_URL": "http://192.0.2.1", "LOOPGRID_CLAUDE_MODE": "enforce"})
-        self.assertEqual(hook.config({"LOOPGRID_BASE_URL": "https://192.0.2.1"})["base"], "https://192.0.2.1")
+            hook.config({"LOOPGRID_BASE_URL": "http://example.invalid", "LOOPGRID_CLAUDE_MODE": "enforce"})
+        self.assertEqual(hook.config({"LOOPGRID_BASE_URL": "https://example.invalid"})["base"], "https://example.invalid")
 
     def test_config_reject_embedded_credentials(self):
         with self.assertRaises(hook.HookFailure):
-            hook.config({"LOOPGRID_BASE_URL":"https://someone:pwd@192.0.2.1"})
+            hook.config({"LOOPGRID_BASE_URL":"https://someone:pwd@127.0.0.1:8000"})
 
     def test_config_reject_bad_mode(self):
         with self.assertRaises(hook.HookFailure):
@@ -450,6 +450,18 @@ class FormatTests(unittest.TestCase):
         self.assertTrue(plugin["userConfig"]["service_key"]["sensitive"])
         self.assertFalse(plugin["userConfig"]["service_key"]["required"])
         self.assertEqual(plugin["userConfig"]["core_url"]["type"], "string")
+
+    def test_process_environment_reads_only_declared_hook_settings(self):
+        with patch.dict(os.environ, {
+            "LOOPGRID_CLAUDE_MODE": "observe",
+            "CLAUDE_PLUGIN_OPTION_WORKSPACE_ID": "test-workspace",
+            "UNRELATED_SETTING_FOR_TEST": "not-a-hook-setting",
+        }):
+            selected = hook.process_hook_settings()
+        self.assertEqual(selected["LOOPGRID_CLAUDE_MODE"], "observe")
+        self.assertEqual(selected["CLAUDE_PLUGIN_OPTION_WORKSPACE_ID"], "test-workspace")
+        self.assertNotIn("UNRELATED_SETTING_FOR_TEST", selected)
+        self.assertEqual(set(selected).difference(hook.HOOK_SETTING_NAMES), set())
 
     def test_hook_credential_only_from_plugin_option(self):
         cfg = hook.config({"LOOPGRID_SERVICE_KEY": "machine-wide-secret"})

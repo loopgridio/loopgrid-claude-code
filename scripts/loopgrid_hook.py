@@ -23,6 +23,23 @@ MAX_HOOK_BYTES = 2 * 1024 * 1024
 DEFAULT_TOOLS = "Bash,Write,Edit,MultiEdit,NotebookEdit,mcp__*"
 PROJECT_OPT_IN = Path(".loopgrid") / "claude-code.enabled"
 
+# Hook settings are intentionally limited to these named operator/Claude values.
+# Never enumerate the installer's full environment or forward arbitrary machine
+# tokens to LoopGrid Core. Claude's service key is selected via userConfig.
+HOOK_SETTING_NAMES = (
+    "LOOPGRID_CLAUDE_MODE", "CLAUDE_PROJECT_DIR",
+    "CLAUDE_PLUGIN_OPTION_CORE_URL", "LOOPGRID_BASE_URL",
+    "LOOPGRID_CLAUDE_TOOLS", "CLAUDE_PLUGIN_DATA",
+    "CLAUDE_PLUGIN_OPTION_SERVICE_KEY", "CLAUDE_PLUGIN_OPTION_WORKSPACE_ID",
+    "LOOPGRID_WORKSPACE", "LOOPGRID_CLAUDE_POLICY_ID",
+)
+
+
+def process_hook_settings():
+    """Read only explicitly declared hook settings, not the full environment."""
+    return {name: value for name in HOOK_SETTING_NAMES
+            if (value := os.getenv(name)) is not None}
+
 
 class HookFailure(RuntimeError):
     pass
@@ -33,7 +50,7 @@ def digest(obj: object) -> str:
 
 
 def config(env=None):
-    env = os.environ if env is None else env
+    env = process_hook_settings() if env is None else env
     mode = env.get("LOOPGRID_CLAUDE_MODE", "off").lower().strip()
     if mode not in {"off", "observe", "enforce"}:
         raise HookFailure("Invalid LOOPGRID_CLAUDE_MODE; use off, observe, or enforce")
@@ -62,7 +79,7 @@ def project_opted_in(env=None):
     project scanning is performed. Do not fall back to the plugin install
     directory, which would enable unrelated sessions.
     """
-    env = os.environ if env is None else env
+    env = process_hook_settings() if env is None else env
     raw_root = env.get("CLAUDE_PROJECT_DIR", "")
     if not raw_root:
         return False
@@ -253,7 +270,7 @@ def run(argv=None, stdin=None, stdout=None, env=None):
     argv = sys.argv[1:] if argv is None else argv
     stdin = sys.stdin if stdin is None else stdin
     stdout = sys.stdout if stdout is None else stdout
-    env = os.environ if env is None else env
+    env = process_hook_settings() if env is None else env
     if len(argv) != 1 or argv[0] not in {"pre", "post", "failure"}:
         return 2
     try:

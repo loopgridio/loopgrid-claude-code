@@ -19,12 +19,13 @@ This document distinguishes real user-observed tests from tests still required f
 - Security smoke test on the previously built launcher reported inherited AWS and machine-wide LoopGrid service keys filtered, explicitly selected service key forwarded, and remote non-HTTPS Core rejected.
 - Launcher repository GitHub CI was green on Ubuntu, Windows, and macOS (Python 3.12).
 
-## Pending before the one Claude plugin GitHub push
+## Current Claude plugin release checkpoint (October 11, 2026)
 
-- **Completed:** Generated `uv.lock` on Windows (38 lockfile entries, both LoopGrid 0.1.0 pins, published-registry SHA-256 hashes); `uv lock --check` passed on October 11, 2026.
-- **Completed:** On Windows, 48 Python tests passed and strict Claude manifest validation passed; the plugin source passed Python compilation. **Still pending:** clean Claude Code `--plugin-dir` six-tool discovery **from outside the source folder**, for this exact candidate.
-- Confirm connection to local Core and at least one synthetic decision + successful fresh-workspace verification with the new launcher.
-- Revalidate current Directory draft against the new GitHub commit and inspect scanner/Verified findings. These results remain unknown until the portal scans that commit.
-- Obtain a permissible interpretation of the Directory compliance attestation covering **declared Python lifecycle hooks** before checking the box. Do not claim Anthropic Verified in advance.
+- **Completed:** Genuine `uv.lock` generated and checked on Windows (38 resolution entries; the published `loopgrid-claude-launcher==0.1.0` and `loopgrid-mcp==0.1.0` packages are represented).
+- **Completed:** Clean Windows Claude Code `/mcp` smoke test using the pinned published `uvx` plugin showed a connected `plugin:loopgrid:loopgrid` server and all six tools. Strict manifest validation passed.
+- **Completed:** GitHub `main @ 8b04b09` CI passed **49 unit tests** on Ubuntu and Windows, Python 3.10 and 3.12. A prior CI run failed because the diagnostic test assumed uv existed on bare runners; the test was corrected and CI passed.
+- **Prepared:** A narrow scanner-review patch changes only hook environment selection, a few security test fixtures and submission documentation. It passes **50 local tests**. Re-run all GitHub CI jobs and Claude manifest validation after committing.
+- **Captured Anthropic scan:** `main @ 8b04b09` structurally passed but still reported **4 policy holds** and **4 field warnings**. The next source scan is needed to determine which, if any, clear. The `uvx` transitive dependency review remains a substantive human-review question.
+- **Before submission:** verify the form's compliance attestation for the three declared Python hook commands, confirm actual Core data retention matches the privacy description and obtain an Anthropic reviewer interpretation if necessary.
 
 The plugin **does not** execute a real refund or other financial action. Tool-result receipts are not independently observed downstream business outcomes.
